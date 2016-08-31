@@ -17,6 +17,7 @@
  * @property products_model   $products_model
  * @property film_model       $film_model
  * @property film_model1      $film_model1
+ * @property project_model      $project_model
  *
  *
  *
