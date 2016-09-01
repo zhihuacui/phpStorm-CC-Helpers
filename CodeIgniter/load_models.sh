@@ -10,7 +10,6 @@ $f = new File($argv[1]);
 $w = new Write();
 $w->writeConfig(File::CONFIGFILE, $f->names);
 
-print_r($f);
 
 
 
@@ -67,10 +66,13 @@ class Write {
 
     public function writeConfig($file, $data) {
         $fileData = $this->getFileData($file);
-        $pos = $this->formatFileData($fileData);
-        $data = $this->formatData($data);
-        $newFile = array_splice($fileData, $pos+1, null, $data);
-        $newFile = join("\n", $newFile);
+        $res = $this->formatFileData($fileData);
+        $pos = $res['pos'];
+        $data = array_values($this->formatData($data));
+        $data = array_merge($data, array_values($res['data']));
+        $data = array_unique($data);
+        array_splice($fileData, $pos, 0, $data);
+        $newFile = join("\n", $fileData);
         file_put_contents($file, $newFile);
     }
     private function getFileData($file){
@@ -80,28 +82,37 @@ class Write {
         if (!is_readable($file) || !is_writeable($file)) {
             throw new Exception("Unable to read/write to file: $file");
         }
-        return file_get_contents($file);
+        return array_filter(file($file), function($a) {
+            return strlen($a) > 1;
+        });
     }
 
     private function formatData($data) {
         $return = array();
         foreach ($data as $line) {
-            $return[] = '* @property ' . $line . '$' . $line;
+            if (!strpos($line, 'model')) {
+                $line = strtolower($line);
+            }
+            $return[] = '* @property ' . $line . ' $' . $line;
         }
         return $return;
     }
     private function formatFileData(&$data) {
-        $fileArr =  explode("\n", $data);
+        var_dump($data);
         $pos = 14;
-        foreach ($fileArr as $lineNo => $line) {
+        $i = 1;
+        $config = array();
+        foreach ($data as $lineNo => $line) {
+            $i++;
             if (strpos($line, 'property')) {
-                unset($fileArr[$lineNo]);
+                unset($data[$lineNo]);
+                $config[] = trim($line);
             }
             if (strpos($line, 'example')) {
-                $pos = $lineNo;
+                $pos = $i;
             }
         }
-        return $pos;
+        return array('pos' => $pos, 'data' => $config);
     }
 
 }
